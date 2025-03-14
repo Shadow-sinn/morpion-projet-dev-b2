@@ -1,0 +1,130 @@
+Étape 1: Se connecter au serveur WebSocket
+URL : ws://localhost:3000
+Méthode : Connect
+Action : Ouvrir une connexion WebSocket (pas besoin d'envoyer un message tout de suite).
+Étape 2: Test de l'ajout à la file d'attente (Message join_queue)
+Après avoir établi la connexion WebSocket, tu peux envoyer un message pour que le joueur rejoigne la file d'attente.
+
+Message JSON à envoyer :
+json
+Copier
+Modifier
+{
+  "type": "join_queue",
+  "pseudo": "Joueur1"
+}
+Scénarios de test :
+Test du message valide :
+
+Envoie un message avec un pseudo valide.
+Attends une réponse indiquant que le joueur a bien rejoint la file.
+Exemple de réponse attendue :
+json
+Copier
+Modifier
+{
+  "type": "success",
+  "message": "Bienvenue dans la file, Joueur1!"
+}
+Test du pseudo déjà pris :
+
+Si tu as un autre client WebSocket ouvert avec un autre pseudo (par exemple, "Joueur2"), essaie de rejoindre la file avec le même pseudo.
+Exemple de réponse attendue :
+json
+Copier
+Modifier
+{
+  "type": "error",
+  "message": "Pseudo déjà pris."
+}
+Étape 3: Test du tour de jeu (Message play_turn)
+Pour tester un tour de jeu, tu dois envoyer un message play_turn avec les informations du match et de l'action (index du plateau et symbole du joueur).
+
+Scénarios de test :
+Test du tour de jeu avec un pseudo valide et un match existant :
+
+Imaginons que tu as déjà deux joueurs dans un match avec un identifiant de match matchId: 12345.
+Envoie un message pour jouer un tour, par exemple :
+json
+Copier
+Modifier
+{
+  "type": "play_turn",
+  "matchId": 12345,
+  "symbol": "X",
+  "index": 0
+}
+Attends une réponse qui doit mettre à jour le plateau et indiquer le gagnant, si applicable.
+Exemple de réponse attendue :
+json
+Copier
+Modifier
+{
+  "type": "update_board",
+  "board": ["X", null, null, null, null, null, null, null, null],
+  "winner": null
+}
+Test du tour de jeu avec un joueur qui joue alors que ce n'est pas son tour :
+
+Si le joueur "X" a déjà joué, et que "O" essaie de jouer hors tour, envoie un message play_turn de la manière suivante :
+json
+Copier
+Modifier
+{
+  "type": "play_turn",
+  "matchId": 12345,
+  "symbol": "O",
+  "index": 1
+}
+Exemple de réponse attendue :
+json
+Copier
+Modifier
+{
+  "type": "error",
+  "message": "Ce n'est pas votre tour."
+}
+Test d'un match terminé :
+
+Si le match est terminé (par exemple, un joueur a gagné ou c'est un match nul), envoie un tour supplémentaire :
+json
+Copier
+Modifier
+{
+  "type": "play_turn",
+  "matchId": 12345,
+  "symbol": "X",
+  "index": 3
+}
+Exemple de réponse attendue :
+json
+Copier
+Modifier
+{
+  "type": "error",
+  "message": "Match terminé ou non trouvé."
+}
+Étape 4: Test de la déconnexion du joueur
+Simule la déconnexion d'un joueur et vérifie si l'autre joueur reçoit la notification.
+
+Simuler la déconnexion d'un joueur :
+Ferme l'une des connexions WebSocket (par exemple, celle de "Joueur1").
+Vérifie si le joueur restant ("Joueur2") reçoit un message indiquant que l'autre joueur s'est déconnecté.
+Exemple de message reçu :
+json
+Copier
+Modifier
+{
+  "type": "game_over",
+  "message": "L'autre joueur s'est déconnecté."
+}
+Étape 5: Vérification des réponses de chaque action
+Assure-toi de tester chaque action et de vérifier que les réponses sont appropriées en fonction des scénarios.
+
+Résumé des tests Postman :
+Connexion WebSocket avec ws://localhost:3000.
+Envoyer le message join_queue pour rejoindre la file d'attente.
+Envoyer le message play_turn pour jouer un tour (en respectant l'ordre des joueurs).
+Tester une tentative de jouer hors tour.
+Tester un match terminé.
+Simuler la déconnexion d'un joueur et vérifier la réaction.
