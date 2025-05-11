@@ -15,7 +15,7 @@ const TicTacToe = () => {
 
   useEffect(() => {
     // Connexion WebSocket
-    wsRef.current = new WebSocket('ws://localhost:3000');
+    wsRef.current = new WebSocket(process.env.API_URL);
 
     wsRef.current.onmessage = (event) => {
       console.log('Message reçu:', event.data);
@@ -131,7 +131,7 @@ const TicTacToe = () => {
     if (wsRef.current) {
       wsRef.current.close();
     }
-    wsRef.current = new WebSocket('ws://localhost:3000');
+    wsRef.current = new WebSocket(process.env.API_URL);
   }
   return (
     <div className="container">
