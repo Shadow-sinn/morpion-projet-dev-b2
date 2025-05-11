@@ -1,12 +1,15 @@
+const { v4: uuidv4 } = require('uuid');  // Importer la fonction v4 de uuid
 const pool = require("./database");
 
 const queue = [];
+// Liste des matchs en cours, déplacée ici
+let matches = [];
 
 async function addToQueue(player) {
   // Ajout du joueur à la file d'attente et insertion dans la base de données
   queue.push(player);
   await pool.query("INSERT INTO queue (pseudo, ip) VALUES (?, ?)", [player.pseudo, player.ip]);
-  
+
   // Vérification des matches disponibles
   checkForMatch();
 }
@@ -19,25 +22,27 @@ async function checkForMatch() {
 
     const board = Array(9).fill(null); // Initialisation du plateau de jeu
     const match = {
-      id: Date.now(), // Utilisation de Date.now() pour générer un ID unique
+      id: uuidv4(),  // Utilisation de uuid pour générer un identifiant unique
       player1,
       player2,
-      board: JSON.stringify(board), // Le plateau est un tableau JSON pour pouvoir l'enregistrer
+      board: board, // Le plateau est un tableau pour pouvoir l'enregistrer
       isFinished: false,
-      winner: null
+      winner: null,
+      currentPlayer: 1, // Le joueur 1 commence
+      player1Symbol: "X", // Assigner le symbole X au joueur 1
+      player2Symbol: "O"  // Assigner le symbole O au joueur 2
     };
 
-    // Enregistrement du match dans la base de données
-    await pool.query("INSERT INTO matches (player1, player2, board, is_finished) VALUES (?, ?, ?, ?)", 
-      [player1.pseudo, player2.pseudo, JSON.stringify(board), false]);
+    // Ajouter le match à la liste des matchs en cours
+    matches.push(match);
 
     // Envoi des informations de début de match à chaque joueur
     player1.socket.send(JSON.stringify({
       type: "match_start",
       match: {
         id: match.id,
-        board: match.board, // Envoie du plateau
-        yourSymbol: "X", // Assignation du symbole X au joueur 1
+        board: match.board,  // Envoie du plateau
+        yourSymbol: match.player1Symbol, // Assignation du symbole X au joueur 1
         opponent: {
           pseudo: player2.pseudo, // Pseudo de l'adversaire
           ip: player2.ip // IP de l'adversaire
@@ -49,15 +54,17 @@ async function checkForMatch() {
       type: "match_start",
       match: {
         id: match.id,
-        board: match.board, // Envoie du plateau
-        yourSymbol: "O", // Assignation du symbole O au joueur 2
+        board: match.board,  // Envoie du plateau
+        yourSymbol: match.player2Symbol, // Assignation du symbole O au joueur 2
         opponent: {
           pseudo: player1.pseudo, // Pseudo de l'adversaire
           ip: player1.ip // IP de l'adversaire
         }
       }
     }));
+
+    console.log(`Match ${match.id} ajouté avec succès.`);
   }
 }
 
-module.exports = { addToQueue };
+module.exports = { addToQueue, matches };

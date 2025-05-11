@@ -2,8 +2,8 @@ const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
 const cors = require("cors");
-const { addToQueue } = require("./matchmaking");
-const { checkWinner } = require("./gameLogic");
+const { addToQueue, matches } = require("./matchmaking");  // Importation de la logique de matchmaking
+const { checkWinner } = require("./gameLogic"); // Importation de la logique de jeu
 
 const app = express();
 const server = http.createServer(app);
@@ -13,9 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 // Liste des joueurs actifs
-const activePlayers = [];
-// Liste des matchs en cours
-const matches = [];
+let activePlayers = [];
 
 wss.on("connection", (ws) => {
   ws.on("message", (message) => {
@@ -28,9 +26,11 @@ wss.on("connection", (ws) => {
         ws.send(JSON.stringify({ type: "error", message: "Pseudo déjà pris." }));
         return;
       }
-      
+
       // Ajouter à la file d'attente
       addToQueue({ pseudo: data.pseudo, ip: ws._socket.remoteAddress, socket: ws });
+
+      // Ajouter le joueur à la liste des joueurs actifs
       activePlayers.push({ pseudo: data.pseudo, socket: ws });
     }
 
@@ -43,8 +43,8 @@ wss.on("connection", (ws) => {
       }
 
       // Vérifier si c'est le tour du joueur
-      if ((match.currentPlayer === 1 && data.symbol !== match.player1.symbol) || 
-          (match.currentPlayer === 2 && data.symbol !== match.player2.symbol)) {
+      let currentSymbol = match.currentPlayer === 1 ? match.player1Symbol : match.player2Symbol;
+      if (data.symbol !== currentSymbol) {
         ws.send(JSON.stringify({ type: "error", message: "Ce n'est pas votre tour." }));
         return;
       }
@@ -55,7 +55,7 @@ wss.on("connection", (ws) => {
 
       if (winner) {
         match.isFinished = true;
-        match.winner = winner !== "draw" ? data.symbol : "draw";
+        match.winner = winner !== "draw" ? winner : "draw";
       }
 
       // Envoyer la mise à jour aux deux joueurs
